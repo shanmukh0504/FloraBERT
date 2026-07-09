@@ -24,6 +24,107 @@ Predicting gene expression levels from upstream promoter regions using deep lear
 - [`2-feature-visualization/`](https://github.com/shanmukh0504/FloraBERT/tree/master/scripts/2-feature-visualization)`
   - [`embedding_vis.py`](https://github.com/shanmukh0504/FloraBERT/blob/master/scripts/2-feature-visualization/embedding_vis.py): computing a sample of BERT embeddings for the testing data and saving to a tensorboard log. Can specify how many embeddings to sample with `--num-embeddings XX` where `XX` is the number of embeddings (must be integer).
 
+## Current build checkpoints
+
+The repository currently includes the processed NAM expression dataset, tokenizer files, model code, and smoke-test scripts. Full trained transformer checkpoint weights are not checked in under `models/transformer`, so evaluation of a trained model requires either training locally or adding downloaded checkpoint files.
+
+### Project status
+
+FloraBERT is currently set up as a reproducible research pipeline:
+
+- Processed NAM promoter/expression data is available locally.
+- The byte-level BPE tokenizer is available locally.
+- Model construction, data loading, training, checkpoint loading, prediction, evaluation, and report generation are verified.
+- Local smoke checkpoints can be trained and evaluated end-to-end.
+
+The smoke checkpoints are intentionally tiny validation models. They prove that the pipeline works, but their metrics should not be presented as final biological performance. A final result requires a longer run with a larger training budget and, ideally, warm-starting from a pretrained language-model checkpoint.
+
+Set up a local environment:
+
+```bash
+make python_requirements
+```
+
+Run checkpoint checks:
+
+```bash
+.venv/bin/python scripts/check_project_health.py
+.venv/bin/python scripts/smoke_test_model.py
+.venv/bin/python scripts/smoke_train.py
+.venv/bin/python scripts/smoke_evaluate.py
+```
+
+Run the one-command local demo:
+
+```bash
+.venv/bin/python scripts/run_demo_pipeline.py
+```
+
+Regenerate the smoke checkpoint during the demo:
+
+```bash
+.venv/bin/python scripts/run_demo_pipeline.py --train-smoke
+```
+
+Run a prediction demo:
+
+```bash
+.venv/bin/python scripts/predict.py --gene-id Zm00001eb002390
+```
+
+Use a trained checkpoint when available:
+
+```bash
+.venv/bin/python scripts/predict.py \
+  --gene-id Zm00001eb002390 \
+  --checkpoint models/transformer/prediction-model
+```
+
+Train and evaluate a small local checkpoint:
+
+```bash
+.venv/bin/python scripts/1-modeling/train_prediction_smoke.py \
+  --max-steps 5 \
+  --nshards 20 \
+  --batch-size 2
+
+.venv/bin/python scripts/predict.py \
+  --gene-id Zm00001eb002390 \
+  --checkpoint models/transformer/prediction-model-smoke
+
+.venv/bin/python scripts/1-modeling/evaluate_checkpoint.py \
+  --checkpoint models/transformer/prediction-model-smoke \
+  --nshards 20 \
+  --output output/model_eval/prediction-model-smoke.csv \
+  --report-dir output/reports/prediction-model-smoke
+```
+
+Local checkpoints under `models/transformer/` and generated outputs under `output/` are ignored by git.
+
+Run the main fine-tuning path on a small shard:
+
+```bash
+.venv/bin/python scripts/1-modeling/finetune.py \
+  --output-dir models/transformer/prediction-model-finetune-smoke \
+  --pretrained-model '' \
+  --nshards 50 \
+  --max-steps 3 \
+  --per-device-train-batch-size 2 \
+  --per-device-eval-batch-size 2 \
+  --gradient-accumulation-steps 1 \
+  --n-workers 1 \
+  --learning-rate 1e-4
+```
+
+For a longer local run, reduce or remove `--nshards` and increase `--max-steps`.
+
+The checkpoint evaluation command writes:
+
+- `metrics.csv`: aggregate MSE, MAE, R2 and pseudo-R2
+- `tissue_metrics.csv`: tissue-level MSE, MAE and R2
+- `predictions_long.csv`: true/predicted values by gene and tissue
+- `plots/*.png`: aggregate and tissue-level prediction plots
+
 **`module/`: directory for our customized modules**
 
 - [`module/`](https://github.com/shanmukh0504/FloraBERT/tree/master/module/florabert): our main module named `florabert` that packages customized functions
