@@ -4,9 +4,14 @@ Fine-tuning the transformer model on the downstream gene expression prediction t
 import os
 
 import torch
-from ray import tune
-from ray.tune.schedulers import AsyncHyperBandScheduler
-from ray.tune.suggest.hyperopt import HyperOptSearch
+try:
+    from ray import tune
+    from ray.tune.schedulers import AsyncHyperBandScheduler
+    from ray.tune.search.hyperopt import HyperOptSearch
+except ImportError:
+    tune = None
+    AsyncHyperBandScheduler = None
+    HyperOptSearch = None
 
 from florabert import config, utils, training, dataio
 from florabert import transformers as tr
@@ -17,7 +22,7 @@ TRAIN_DATA = "train.tsv"
 EVAL_DATA = "eval.tsv"
 TEST_DATA = "test.tsv"
 TOKENIZER_DIR = config.models / "byte-level-bpe-tokenizer"
-PREPROCESSOR = config.models / "preprocessor" / "preprocessor.pkl"
+PREPROCESSOR = None
 
 # Starting from last checkpoint of the general purpose model
 PRETRAINED_MODEL = (
@@ -28,6 +33,8 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def make_search_space(trial) -> dict:
+    if tune is None:
+        raise ImportError("Install ray[tune] to use --hyperparameter-search")
     return {
         "learning_rate": tune.loguniform(1e-5, 1e-4),
         "num_train_epochs": tune.choice(range(1, 20)),
@@ -65,10 +72,14 @@ def main():
         model_name="roberta-pred-mean-pool",
         log_offset=1,
         preprocessor=PREPROCESSOR,
-        transformation="log",
+        transformation=None,
         hyperparam_search_metrics="mse",
         hyperparam_search_trials=10,
     )
+
+    if args.pretrained_model and not os.path.exists(args.pretrained_model):
+        print(f"Pretrained model {args.pretrained_model} not found; training from scratch")
+        args.pretrained_model = None
 
     settings = utils.get_model_settings(config.settings, args)
 
@@ -103,6 +114,7 @@ def main():
         transformation=args.transformation,
         discretize=(args.output_mode == "classification"),
         nshards=args.nshards,
+        n_workers=args.n_workers or 1,
     )
     dataset_train = datasets["train"]
     dataset_eval = datasets["eval"]
@@ -114,11 +126,23 @@ def main():
         dataset_eval = dataset_eval.shard(num_shards=args.nshards_eval, index=1)
 
     data_collator = dataio.load_data_collator("pred")
-    training_settings = config.settings["training"]["finetune"]
+    training_settings = config.settings["training"]["finetune"].copy()
     if args.learning_rate is not None:
         training_settings["learning_rate"] = args.learning_rate
     if args.num_train_epochs is not None:
         training_settings["num_train_epochs"] = args.num_train_epochs
+    if args.max_steps is not None:
+        training_settings["max_steps"] = args.max_steps
+    if args.per_device_train_batch_size is not None:
+        training_settings["per_device_train_batch_size"] = args.per_device_train_batch_size
+    if args.per_device_eval_batch_size is not None:
+        training_settings["per_device_eval_batch_size"] = args.per_device_eval_batch_size
+    if args.gradient_accumulation_steps is not None:
+        training_settings["gradient_accumulation_steps"] = args.gradient_accumulation_steps
+    training_settings["report_to"] = []
+    if training_settings.get("fp16") and not torch.cuda.is_available():
+        print("CUDA is unavailable; disabling fp16")
+        training_settings["fp16"] = False
 
     print(training_settings)
 
@@ -137,6 +161,8 @@ def main():
     )
 
     if args.hyperparameter_search:
+        if tune is None:
+            raise ImportError("Install ray[tune] to use --hyperparameter-search")
         mode = "min" if args.direction == "minimize" else "max"
         if args.search_metric:
             print(f"Objective is {args.search_metric}")
