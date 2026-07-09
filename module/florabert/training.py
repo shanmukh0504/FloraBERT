@@ -394,6 +394,7 @@ class MyTrainingArguments(TrainingArguments):
     """
 
     delay_size: int = field(default=500)
+    overwrite_output_dir: bool = field(default=False)
     betas: tuple = field(default=(0.9, 0.999))
     eps: float = field(default=1e-8)
     weight_decay: float = field(default=0)
