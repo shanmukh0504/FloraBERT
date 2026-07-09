@@ -7,3 +7,5 @@ __pycache__/
 *.py[cod]
 models/transformer/
 output/
+data/final/transformer/seq/
+.DS_Store
