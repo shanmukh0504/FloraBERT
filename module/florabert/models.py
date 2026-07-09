@@ -195,7 +195,7 @@ class RobertaForSequenceClassificationMeanPool(RobertaPreTrainedModel):
     """
 
     _keys_to_ignore_on_load_missing = [r"position_ids"]
-    all_tied_weights_keys = []
+    all_tied_weights_keys = {}
 
     def __init__(self, config: RobertaMeanPoolConfig):
         super().__init__(config)
@@ -367,7 +367,7 @@ class BertMeanPoolConfig(BertConfig):
 
 
 class BertForSequenceClassificationMeanPool(BertPreTrainedModel):
-    all_tied_weights_keys = []
+    all_tied_weights_keys = {}
 
     def __init__(self, config):
         super().__init__(config)
