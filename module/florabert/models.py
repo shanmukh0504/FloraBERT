@@ -9,9 +9,9 @@ from torch import nn
 from torch.nn import BCELoss, BCEWithLogitsLoss, MSELoss, PoissonNLLLoss, KLDivLoss
 
 from transformers import BertConfig, BertModel, RobertaConfig, RobertaModel
-from transformers.modeling_bert import BertPreTrainedModel
 from transformers.modeling_outputs import SequenceClassifierOutput
-from transformers.modeling_roberta import RobertaPreTrainedModel
+from transformers.models.bert.modeling_bert import BertPreTrainedModel
+from transformers.models.roberta.modeling_roberta import RobertaPreTrainedModel
 
 
 class RobertaMeanPoolConfig(RobertaConfig):

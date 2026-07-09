@@ -15,6 +15,7 @@ def get_predictions(
     model: torch.nn.Module,
     dataset: torch.utils.data.Dataset,
     return_labels: bool = True,
+    num_workers: int = 0,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Compute model predictions for `dataset`.
 
@@ -35,7 +36,7 @@ def get_predictions(
         batch_size=64,
         collate_fn=default_data_collator,
         drop_last=False,
-        num_workers=mp.cpu_count(),
+        num_workers=num_workers,
     )
 
     true_labels = []

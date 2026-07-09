@@ -249,12 +249,11 @@ def make_trainer(
     training_args = MyTrainingArguments(
         output_dir=str(output_dir),
         overwrite_output_dir=overwrite_output_dir,
-        evaluation_strategy="steps",
+        eval_strategy="steps",
         # TODO: Figure out which setting for logging R2
         prediction_loss_only=False,
         load_best_model_at_end=True,
         metric_for_best_model="eval_loss",
-        evaluate_during_training=True,
         do_eval=True,
         **training_kwargs,
     )
@@ -357,15 +356,17 @@ def make_trainer(
             opt_kwargs=opt_kwargs,
             sched_kwargs=sched_kwargs,
         )
-    return Trainer(
+    trainer_kwargs = dict(
         model=model,
         args=training_args,
         data_collator=data_collator,
         train_dataset=train_dataset,
         eval_dataset=test_dataset,
-        optimizers=optimizers,
         compute_metrics=compute_metrics,
     )
+    if optimizers is not None:
+        trainer_kwargs["optimizers"] = optimizers
+    return Trainer(**trainer_kwargs)
 
 
 def do_training(trainer, args, output_dir):

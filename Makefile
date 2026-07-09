@@ -8,9 +8,9 @@ SHELL := /bin/bash
 all : python_requirements genomics_tools
 
 python_requirements: requirements.txt
-	virtualenv env \
-	&& source ./env/bin/activate \
-	&& pip install -r requirements.txt
+	python3 -m venv .venv \
+	&& ./.venv/bin/python -m pip install --upgrade pip setuptools wheel \
+	&& ./.venv/bin/python -m pip install -r requirements.txt
 
 genomics_tools: samtools bedtools
 

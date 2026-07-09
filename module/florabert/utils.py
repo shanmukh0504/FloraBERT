@@ -459,6 +459,36 @@ def get_args(
         default=None,
     )
     parser.add_argument(
+        "--max-steps",
+        type=int,
+        help="Maximum number of training steps. Overrides num_train_epochs when positive.",
+        default=None,
+    )
+    parser.add_argument(
+        "--per-device-train-batch-size",
+        type=int,
+        help="Per-device training batch size.",
+        default=None,
+    )
+    parser.add_argument(
+        "--per-device-eval-batch-size",
+        type=int,
+        help="Per-device eval batch size.",
+        default=None,
+    )
+    parser.add_argument(
+        "--gradient-accumulation-steps",
+        type=int,
+        help="Gradient accumulation steps.",
+        default=None,
+    )
+    parser.add_argument(
+        "--n-workers",
+        type=int,
+        help="Number of dataset preprocessing workers.",
+        default=None,
+    )
+    parser.add_argument(
         "--search-metric",
         type=str,
         help="Metric to optimize in hyperparameter search",

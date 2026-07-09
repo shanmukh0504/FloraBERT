@@ -43,18 +43,17 @@ def reload_settings():
     settings = yaml.full_load((root / 'config.yaml').open('r'))
 
 
-# New (NAM)
-# plant embryo and shoot aren't available for all cultivars
+# Tissue labels in data/final/nam_data/merged_seq_genex.csv and
+# data/final/transformer/genex/nam/*.tsv.
 tissues = [
-    'endosperm',
-    'tassel inflorescence',
-    'leaf base',
+    'tassel',
+    'base',
     'anther',
-    'leaf',
-    'ear inflorescence',
+    'middle',
+    'ear',
     'shoot',
+    'tip',
     'root',
-    'leaf tip'
 ]
 
 # OLD
