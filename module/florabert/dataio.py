@@ -197,7 +197,7 @@ def load_datasets(
         kmer (int, optional): whether to run the kmer flip experiment and if so,
             how large kmers to flip. Defaults to None.
         n_workers (int, optional): number of processes to use for preprocessing.
-            Use 0 or None to preprocess in the current process. Defaults to
+            Use 0, 1, or None to preprocess in the current process. Defaults to
             `mp.cpu_count()` (number of available CPUs).
         position_buckets (Tuple[int], optional): the different buckets for the bucketed
             positional importance experiment
@@ -224,7 +224,7 @@ def load_datasets(
         for key in ["train", "eval", "test"]:
             if key in datasets:
                 datasets[key] = datasets[key].shard(nshards, 0)
-    map_num_proc = n_workers if n_workers and n_workers > 0 else None
+    map_num_proc = n_workers if n_workers and n_workers > 1 else None
 
     if kmer is not None:
         if position_buckets is not None:

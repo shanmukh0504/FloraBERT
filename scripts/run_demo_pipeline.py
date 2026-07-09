@@ -7,13 +7,15 @@ evaluating it.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PYTHON = ROOT / ".venv" / "bin" / "python"
+VENV_PYTHON = ROOT / ".venv" / "bin" / "python"
+PYTHON = VENV_PYTHON if VENV_PYTHON.exists() else Path(sys.executable)
 SMOKE_CHECKPOINT = ROOT / "models" / "transformer" / "prediction-model-smoke"
 
 
@@ -30,19 +32,21 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def run(command: list[str]) -> None:
+def run(command: list[str], env: dict[str, str]) -> None:
     print("\n$ " + " ".join(command), flush=True)
-    subprocess.run(command, cwd=ROOT, check=True)
+    subprocess.run(command, cwd=ROOT, check=True, env=env)
 
 
 def main() -> int:
     args = parse_args()
-    if not PYTHON.exists():
-        print("Missing .venv. Run `make python_requirements` first.", file=sys.stderr)
-        return 1
+    print(f"Using Python: {PYTHON}", flush=True)
+    env = os.environ.copy()
+    env.setdefault("HF_HOME", str(ROOT / ".cache" / "huggingface"))
+    env.setdefault("HF_DATASETS_CACHE", str(ROOT / ".cache" / "huggingface" / "datasets"))
+    env.setdefault("MPLCONFIGDIR", str(ROOT / ".cache" / "matplotlib"))
 
-    run([str(PYTHON), "scripts/check_project_health.py"])
-    run([str(PYTHON), "scripts/smoke_test_model.py"])
+    run([str(PYTHON), "scripts/check_project_health.py"], env)
+    run([str(PYTHON), "scripts/smoke_test_model.py"], env)
 
     if args.train_smoke or not SMOKE_CHECKPOINT.exists():
         run(
@@ -55,7 +59,8 @@ def main() -> int:
                 str(args.nshards),
                 "--batch-size",
                 str(args.batch_size),
-            ]
+            ],
+            env,
         )
 
     run(
@@ -66,7 +71,8 @@ def main() -> int:
             "Zm00001eb002390",
             "--checkpoint",
             str(SMOKE_CHECKPOINT.relative_to(ROOT)),
-        ]
+        ],
+        env,
     )
     run(
         [
@@ -80,7 +86,8 @@ def main() -> int:
             "output/model_eval/prediction-model-smoke.csv",
             "--report-dir",
             "output/reports/prediction-model-smoke",
-        ]
+        ],
+        env,
     )
     print("\nOK: demo pipeline completed", flush=True)
     return 0
