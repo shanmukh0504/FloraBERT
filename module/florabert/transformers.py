@@ -1,6 +1,7 @@
-from pathlib import PosixPath
+from pathlib import Path, PosixPath
 from typing import Union, Optional
 
+from tokenizers import ByteLevelBPETokenizer
 from transformers import (
     RobertaConfig,
     RobertaTokenizerFast,
@@ -40,6 +41,20 @@ MODELS = {
 }
 
 
+def _ensure_roberta_tokenizer_json(tokenizer_dir: Union[str, PosixPath]) -> None:
+    """Create tokenizer.json for byte-level BPE tokenizers when absent."""
+    tokenizer_path = Path(tokenizer_dir)
+    tokenizer_json = tokenizer_path / "tokenizer.json"
+    vocab = tokenizer_path / "vocab.json"
+    merges = tokenizer_path / "merges.txt"
+
+    if tokenizer_json.exists() or not (vocab.exists() and merges.exists()):
+        return
+
+    tokenizer = ByteLevelBPETokenizer(str(vocab), str(merges))
+    tokenizer.save(str(tokenizer_json))
+
+
 def load_model(model_name: str,
                tokenizer_dir: Union[str, PosixPath],
                max_tokenized_len: int = 254,
@@ -75,20 +90,24 @@ def load_model(model_name: str,
     max_position_embeddings = max_tokenized_len + 2  # To include SOS and EOS
     config_class, tokenizer_class, model_class, tokenizer_settings = MODELS[model_name]
     
-    kwargs = dict(
-        max_len=max_tokenized_len,
+    tokenizer_kwargs = dict(
+        model_max_length=max_tokenized_len,
         truncate=True,
         padding="max_length",
         **tokenizer_settings
     )
     if k is not None:
-        kwargs.update(dict(k=k))
+        tokenizer_kwargs.update(dict(k=k))
     if do_lower_case is not None:
-        kwargs.update(dict(do_lower_case=do_lower_case))
+        tokenizer_kwargs.update(dict(do_lower_case=do_lower_case))
     if padding_side is not None:
-        kwargs.update(dict(padding_side=padding_side))
+        tokenizer_kwargs.update(dict(padding_side=padding_side))
 
-    tokenizer = tokenizer_class.from_pretrained(str(tokenizer_dir), **kwargs)
+    if tokenizer_class is RobertaTokenizerFast:
+        _ensure_roberta_tokenizer_json(tokenizer_dir)
+        tokenizer_kwargs.update(dict(use_fast=True))
+
+    tokenizer = tokenizer_class.from_pretrained(str(tokenizer_dir), **tokenizer_kwargs)
     name_or_path = str(pretrained_model) or ''
     config_obj = config_class(
         vocab_size=len(tokenizer),

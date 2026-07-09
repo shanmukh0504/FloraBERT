@@ -114,7 +114,7 @@ def main():
         transformation=args.transformation,
         discretize=(args.output_mode == "classification"),
         nshards=args.nshards,
-        n_workers=args.n_workers or 1,
+        n_workers=args.n_workers,
     )
     dataset_train = datasets["train"]
     dataset_eval = datasets["eval"]

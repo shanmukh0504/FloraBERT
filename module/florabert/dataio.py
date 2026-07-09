@@ -197,7 +197,8 @@ def load_datasets(
         kmer (int, optional): whether to run the kmer flip experiment and if so,
             how large kmers to flip. Defaults to None.
         n_workers (int, optional): number of processes to use for preprocessing.
-            Defaults to `mp.cpu_count()` (number of available CPUs).
+            Use 0 or None to preprocess in the current process. Defaults to
+            `mp.cpu_count()` (number of available CPUs).
         position_buckets (Tuple[int], optional): the different buckets for the bucketed
             positional importance experiment
 
@@ -223,6 +224,8 @@ def load_datasets(
         for key in ["train", "eval", "test"]:
             if key in datasets:
                 datasets[key] = datasets[key].shard(nshards, 0)
+    map_num_proc = n_workers if n_workers and n_workers > 0 else None
+
     if kmer is not None:
         if position_buckets is not None:
             print("Performing bucketed kmer flip experiment")
@@ -231,25 +234,25 @@ def load_datasets(
         kmer_flip = make_kmer_flip_function(
             seq_key, kmer, buckets=position_buckets, random_seed=random_seed
         )
-        datasets = datasets.map(kmer_flip, batched=True, num_proc=n_workers)
+        datasets = datasets.map(kmer_flip, batched=True, num_proc=map_num_proc)
 
     # Tokenizing
     preprocess_fn = make_preprocess_function(tokenizer, seq_key=seq_key)
     print("Tokenizing")
-    datasets = datasets.map(preprocess_fn, batched=True, num_proc=n_workers)
+    datasets = datasets.map(preprocess_fn, batched=True, num_proc=map_num_proc)
     if filter_empty:
         datasets = datasets.filter(filter_empty_sequence)
 
     if file_type != "text":
         datasets = datasets.map(
-            utils.convert_str_to_tnsr, batched=True, num_proc=n_workers
+            utils.convert_str_to_tnsr, batched=True, num_proc=map_num_proc
         )
         if tissue_subset is not None:
             print(f"Subsetting to tissues {tissue_subset}")
             datasets = datasets.map(
                 lambda x: subset_tissues(x, tissue_subset),
                 batched=True,
-                num_proc=n_workers,
+                num_proc=map_num_proc,
             )
         if discretize:
             assert (
@@ -283,7 +286,7 @@ def load_datasets(
                 datasets = datasets.map(
                     lambda x: preprocess_log_transform(x, log_offset),
                     batched=True,
-                    num_proc=n_workers,
+                    num_proc=map_num_proc,
                 )
     if shuffle:
         seed = config.settings["random_seed"]
