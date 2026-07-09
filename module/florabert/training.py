@@ -247,15 +247,19 @@ def make_trainer(
         Trainer: [description]
     """
     prediction_loss_only = training_kwargs.pop("prediction_loss_only", False)
+    eval_strategy = training_kwargs.pop("eval_strategy", "steps")
+    do_eval = training_kwargs.pop("do_eval", True)
+    load_best_model_at_end = training_kwargs.pop("load_best_model_at_end", True)
+    metric_for_best_model = training_kwargs.pop("metric_for_best_model", "eval_loss")
     training_args = MyTrainingArguments(
         output_dir=str(output_dir),
         overwrite_output_dir=overwrite_output_dir,
-        eval_strategy="steps",
+        eval_strategy=eval_strategy,
         # TODO: Figure out which setting for logging R2
         prediction_loss_only=prediction_loss_only,
-        load_best_model_at_end=True,
-        metric_for_best_model="eval_loss",
-        do_eval=True,
+        load_best_model_at_end=load_best_model_at_end,
+        metric_for_best_model=metric_for_best_model,
+        do_eval=do_eval,
         **training_kwargs,
     )
 

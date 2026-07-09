@@ -70,6 +70,9 @@ def main():
         training_settings["gradient_accumulation_steps"] = args.gradient_accumulation_steps
     training_settings["report_to"] = []
     training_settings["prediction_loss_only"] = True
+    training_settings["eval_strategy"] = "no"
+    training_settings["do_eval"] = False
+    training_settings["load_best_model_at_end"] = False
     if training_settings.get("load_best_model_at_end", True):
         eval_steps = training_settings.get("eval_steps")
         save_steps = training_settings.get("save_steps")
